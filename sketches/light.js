@@ -14,8 +14,10 @@ const cyberColours = ["aqua", "violet", "coral", "cyan", "crimson",
                       "steelblue", "violet"]
 
 const params = {
-  velocityX: 700,
-  velocityY: 850
+  velocityX: 300,
+  velocityY: 200,
+  lineWidth: 20,
+  lineSharpness: 1
 }
 
 class Vector {
@@ -92,24 +94,29 @@ class Ball {
     this.linePoints = [];
   }
 
+  drawLines(context) {
+    context.save()
+    context.strokeStyle = this.colour;
+    for(let i = 1; i < params.lineWidth; ++i) {
+      context.globalAlpha = 1 / params.lineWidth;
+      context.lineWidth = i**params.lineSharpness;
+      context.beginPath();
+      context.moveTo(this.linePoints[0].x, this.linePoints[0].y);
+      this.linePoints.forEach((el, idx) => {
+        context.lineTo(el.x, el.y);
+      });
+      context.lineTo(this.pos.x, this.pos.y);
+      context.stroke();
+    }
+    context.restore();
+  }
+
   draw(context) {
     context.save();
     context.fillStyle = this.colour;
     context.beginPath();
     context.arc(this.pos.x, this.pos.y, this.radius, 0, 2 * Math.PI)
     context.fill();
-
-    context.save()
-    context.strokeStyle = this.colour;
-    context.globalAlpha = 1 - this.linePoints.length / 4000;
-    context.beginPath();
-    context.moveTo(this.linePoints[0].x, this.linePoints[0].y);
-    this.linePoints.forEach((el, idx) => {
-      context.lineTo(el.x, el.y);
-    });
-    context.lineTo(this.pos.x, this.pos.y);
-    context.stroke();
-    context.restore();
 
     context.restore();
   }
@@ -162,6 +169,7 @@ const sketch = () => {
       circles.forEach(element => {
         if(time > 1) {
           element.update(delta);
+          element.drawLines(context);
           element.draw(context);
         }
       });
