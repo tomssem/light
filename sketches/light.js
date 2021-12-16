@@ -7,9 +7,15 @@ const settings = {
   animate: true
 };
 
+const cyberColours = ["aqua", "violet", "coral", "cyan", "crimson",
+                      "darkmagenta", "darkorange", "darkorchid", "darkviolet", "deeppink",
+                      "darkturquoise", "deepskyblue", "dodgerblue", "goldenrod", "indigo",
+                      "magenta", "mediumturquoise", "midnightblue", "orange", "orangered", "purple", "red",
+                      "steelblue", "violet"]
+
 const params = {
   velocityX: 700,
-  velocityY: 700
+  velocityY: 850
 }
 
 class Vector {
@@ -83,7 +89,7 @@ class Ball {
     }
     this.colider = colider;
 
-    this.linePoints = [new Vector(this.pos.x, this.pos.y)];
+    this.linePoints = [];
   }
 
   draw(context) {
@@ -93,14 +99,17 @@ class Ball {
     context.arc(this.pos.x, this.pos.y, this.radius, 0, 2 * Math.PI)
     context.fill();
 
+    context.save()
     context.strokeStyle = this.colour;
+    context.globalAlpha = 1 - this.linePoints.length / 4000;
     context.beginPath();
     context.moveTo(this.linePoints[0].x, this.linePoints[0].y);
-    this.linePoints.forEach((el) => {
+    this.linePoints.forEach((el, idx) => {
       context.lineTo(el.x, el.y);
     });
     context.lineTo(this.pos.x, this.pos.y);
     context.stroke();
+    context.restore();
 
     context.restore();
   }
@@ -120,10 +129,8 @@ const createCircleOfCircles = (number, radius, ballRadius, colider) => {
   let circles = [];
 
   for(let i = 0; i < number; ++i) {
-    const r = random.rangeFloor(0, 255);
-    const g = random.rangeFloor(0, 255);
-    const b = random.rangeFloor(0, 255);
-    const colour = `rgb(${r},${g},${b})`
+    const colour = random.pick(cyberColours);
+    console.log(colour);
 
     const theta = (2 * Math.PI) * (i / number);
     const x = radius * Math.cos(theta);
@@ -151,10 +158,13 @@ const sketch = () => {
     context.save();
 
     context.translate(width / 2, height / 2);
-    circles.forEach(element => {
-      element.draw(context);
-      element.update(delta);
-    });
+
+      circles.forEach(element => {
+        if(time > 1) {
+          element.update(delta);
+          element.draw(context);
+        }
+      });
 
     context.restore();
   };
