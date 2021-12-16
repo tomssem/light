@@ -14,10 +14,11 @@ const cyberColours = ["aqua", "violet", "coral", "cyan", "crimson",
                       "steelblue", "violet"]
 
 const params = {
-  velocityX: 300,
-  velocityY: 200,
-  lineWidth: 20,
-  lineSharpness: 1
+  velocityX: 500,
+  velocityY: 450,
+  lineWidth: 5,
+  lineSharpness: 2,
+  numCircles: 10
 }
 
 class Vector {
@@ -78,6 +79,17 @@ class SquareColider extends Colider {
   }
 }
 
+const dotProd = (a, b) => {
+  return a.x * b.x + a.y * b.y;
+}
+
+const isInLine = (a, b, c) => {
+  const x = new Vector(a.x - b.x, a.y - b.y);
+  const y = new Vector(b.x - c.x, b.y - c.y);
+
+  return dotProd(x, y) < 0.9;
+}
+
 class Ball {
   constructor(pos, vel, radius, colour, colider) {
     this.pos = pos;
@@ -91,13 +103,13 @@ class Ball {
     }
     this.colider = colider;
 
-    this.linePoints = [];
+    this.linePoints = [new Vector(this.pos.x, this.pos.y)];
   }
 
   drawLines(context) {
     context.save()
     context.strokeStyle = this.colour;
-    for(let i = 1; i < params.lineWidth; ++i) {
+    for(let i = 0; i < params.lineWidth; ++i) {
       context.globalAlpha = 1 / params.lineWidth;
       context.lineWidth = i**params.lineSharpness;
       context.beginPath();
@@ -113,10 +125,14 @@ class Ball {
 
   draw(context) {
     context.save();
+    context.globalAlpha = 1 / (params.numCircles - 1);
     context.fillStyle = this.colour;
     context.beginPath();
-    context.arc(this.pos.x, this.pos.y, this.radius, 0, 2 * Math.PI)
-    context.fill();
+    for(let i = 1; i < params.numCircles; ++i) {
+      const radius = this.radius * (i / params.numCircles)**0.7;
+      context.arc(this.pos.x, this.pos.y, radius, 0, 2 * Math.PI)
+      context.fill();
+    }
 
     context.restore();
   }
@@ -126,9 +142,9 @@ class Ball {
     this.pos.y += delta * this.vel.y;
 
     if(this.colider.hasColision(this)) {
+      this.linePoints.push(new Vector(this.pos.x, this.pos.y));
       [this.pos, this.vel] = this.colider.colide(this);
     }
-    this.linePoints.push(new Vector(this.pos.x, this.pos.y));
   }
 };
 
@@ -137,7 +153,6 @@ const createCircleOfCircles = (number, radius, ballRadius, colider) => {
 
   for(let i = 0; i < number; ++i) {
     const colour = random.pick(cyberColours);
-    console.log(colour);
 
     const theta = (2 * Math.PI) * (i / number);
     const x = radius * Math.cos(theta);
@@ -151,7 +166,7 @@ const createCircleOfCircles = (number, radius, ballRadius, colider) => {
 
 let lastTime = 0;
 
-const circles = createCircleOfCircles(7, 100, 20, new SquareColider(...settings.dimensions));
+const circles = createCircleOfCircles(5, 100, 20, new SquareColider(...settings.dimensions));
 
 const sketch = () => {
   return ({ context, width, height, time }) => {
@@ -166,13 +181,14 @@ const sketch = () => {
 
     context.translate(width / 2, height / 2);
 
-      circles.forEach(element => {
-        if(time > 1) {
-          element.update(delta);
-          element.drawLines(context);
-          element.draw(context);
-        }
-      });
+    circles.forEach((element, idx) => {
+      element.update(delta);
+      element.drawLines(context);
+    });
+    circles.forEach((element, idx) => {
+      element.draw(context);
+    });
+
 
     context.restore();
   };
