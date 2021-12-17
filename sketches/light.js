@@ -164,6 +164,11 @@ const createCircleOfCircles = (number, radius, ballRadius, colider) => {
   return circles;
 }
 
+const canvas = document.createElement("canvas");
+canvas.width = settings.dimensions[0];
+canvas.height = settings.dimensions[1];
+const bufferContext = canvas.getContext("2d");
+
 let lastTime = 0;
 
 const circles = createCircleOfCircles(5, 100, 20, new SquareColider(...settings.dimensions));
@@ -172,19 +177,27 @@ const sketch = () => {
   return ({ context, width, height, time }) => {
     const delta = time - lastTime;
     lastTime = time;
-    context.fillStyle = 'black';
-    context.fillRect(0, 0, width, height);
+    bufferContext.fillStyle = 'black';
+    bufferContext.fillRect(0, 0, width, height);
 
     context.lineWidth = 6;
 
     context.save();
 
-    context.translate(width / 2, height / 2);
 
     circles.forEach((element, idx) => {
       element.update(delta);
-      element.drawLines(context);
     });
+
+    bufferContext.translate(width / 2, height / 2);
+    circles.forEach((element, idx) => {
+      element.drawLines(bufferContext);
+    });
+
+    bufferContext.translate(-width / 2, -height / 2);
+    context.drawImage(canvas, 0, 0);
+
+    context.translate(width / 2, height / 2);
     circles.forEach((element, idx) => {
       element.draw(context);
     });
