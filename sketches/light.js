@@ -15,10 +15,11 @@ const cyberColours = ["aqua", "violet", "coral", "cyan", "crimson",
 
 const params = {
   velocityX: 500,
-  velocityY: 450,
+  velocityY: 350,
   lineWidth: 5,
-  lineSharpness: 2,
-  numCircles: 10
+  lineSharpness: 1,
+  numCircles: 15,
+  numPoints: 10
 }
 
 class Vector {
@@ -171,7 +172,7 @@ const bufferContext = canvas.getContext("2d");
 
 let lastTime = 0;
 
-const circles = createCircleOfCircles(5, 100, 20, new SquareColider(...settings.dimensions));
+const circles = createCircleOfCircles(params.numPoints, 100, 20, new SquareColider(...settings.dimensions));
 
 const sketch = () => {
   return ({ context, width, height, time }) => {
