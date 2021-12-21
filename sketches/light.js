@@ -17,12 +17,15 @@ const cyberColours = ["aqua", "violet", "coral", "cyan", "crimson",
                       "steelblue", "violet"]
 
 const params = {
-  velocityX: 500,
-  velocityY: 650,
-  lineWidth: 10,
-  lineSharpness: 1,
-  numCircles: 10,
-  numPoints: 20
+  radiusOfGroup: 500,
+  velocityX: 1000,
+  velocityY: 5,
+  lineWidth: 30,
+  numLines: 10,
+  lineSharpness: 2,
+  numCircles: 1,
+  numPoints: 40,
+  segmentLength: 10
 }
 
 class Vector {
@@ -32,13 +35,77 @@ class Vector {
   }
 }
 
+const distance = (v1, v2) => {
+  return Math.sqrt((v1.x - v2.x)**2 + (v1.y - v2.y)**2);
+}
+
+const fromToVector = (from, to) => {
+  return new Vector(to.x - from.x, to.y - from.y);
+}
+
+const scalarMult = (c, v) => {
+  return new Vector(c * v.x,c * v.y);
+}
+
 class Colider {
   hasColision(circle) {
     return false;
   }
 
   colide(circle) {
-    return vel;
+    return [pos, vel];
+  }
+}
+
+class CircleColider extends Colider {
+  constructor(center, readius) {
+    this.center = center;
+    this.radius = radius;
+  }
+
+  hasColision(circle) {
+    return distance(this.center, circle.pos) <= this.radius;
+  }
+
+  calcColisionOnRadius(point) {
+    const centerToPoint = fromToVector(this.center, v);
+    const distanceToCenter = distance(point, this.center);
+    const scalingFactor = this.radius / distanceToCenter;
+
+    return scalarMult(scalingFactor, centerToPoint);
+  }
+
+  tangentAtPoint(point) {
+    // gradient of radius in y over change in x
+    const radiusGradient = (point.y - this.center.y) / (point.x - this.center.y);
+    // dot product of radius and tangent is zero
+    const tangentGradient = -(1 / radiusGradient);
+
+    // intercept from y = mx + c, c = y - mx
+    const intercept = point.y - (tangentGradient * point.x);
+
+    // vector equation of line is (mx/c, y/c);
+    return scalarMult(1 / intercept, new Vector(tangentGradient * point.x, point.y));
+  }
+
+  colideTangent(point) {
+    // calculate where point strikes circle (snap back to edge along radius)
+    const colisionPoint = this.calcColisionOnRadius(point)
+
+    // calculate eqaution of tangent at that point
+    const tangentAtPoint = this.tangentAtPoint(colisionPoint);
+
+    // reflect velocity in tangent
+
+    // put point back in circle
+    return [point.pos, point.vel];
+  }
+
+  colideRadial(point) {
+    // calculate where[kkkkkkkkkk]
+  }
+
+  colide(point) {
   }
 }
 
@@ -111,17 +178,21 @@ class Ball {
   }
 
   drawLines(context) {
-    if(this.linePoints.length > 1) {
+    if(this.linePoints.length > params.segmentLength) {
       context.save()
       context.strokeStyle = this.colour;
-      const p1 = this.linePoints[this.linePoints.length - 2];
-      const p2 = this.linePoints[this.linePoints.length - 1];
-      for(let i = 0; i < params.lineWidth; ++i) {
+      const begin = this.linePoints[this.linePoints.length - (params.segmentLength + 1)];
+      const end = this.linePoints[this.linePoints.length - 1];
         context.globalAlpha = 1 / params.lineWidth;
-        context.lineWidth = i**params.lineSharpness;
+      for(let l = 0; l < params.numLines; ++l) {
+        context.lineWidth = params.lineWidth * (l / params.numLines)**params.lineSharpness;
         context.beginPath();
-        context.moveTo(p1.x, p1.y);
-        context.lineTo(p2.x, p2.y);
+        context.moveTo(begin.x, begin.y);
+        for(let i = 0; i < params.segmentLength; ++i) {
+          const index = this.linePoints.length - params.segmentLength;
+          const point = this.linePoints[index]
+          context.lineTo(point.x, point.y);
+        }
         context.stroke();
       }
       context.restore();
@@ -178,7 +249,7 @@ bufferContext.fillRect(0, 0, width, height);
 
 let lastTime = 0;
 
-const circles = createCircleOfCircles(params.numPoints, 100, 20, new SquareColider(...settings.dimensions));
+const circles = createCircleOfCircles(params.numPoints, params.radiusOfGroup, 20, new SquareColider(...settings.dimensions));
 
 const sketch = () => {
   return ({ context, width, height, time }) => {
