@@ -18,15 +18,15 @@ const cyberColours = ["aqua", "violet", "coral", "cyan", "crimson",
                       "steelblue", "violet"]
 
 const params = {
-  radiusOfGroup: 20,
-  velocityX: 1000,
-  velocityY: 400,
-  lineWidth: 30,
-  numLines: 10,
+  radiusOfGroup: 100,
+  velocityX: 10,
+  velocityY: 40,
+  lineWidth: 10,
+  numLines: 5,
   lineSharpness: 2,
-  numCircles: 1,
-  numPoints: 40,
-  segmentLength: 200
+  numCircles: 4,
+  numPoints: 10,
+  segmentLength: 3
 }
 
 class Vector {
@@ -45,7 +45,7 @@ const fromToVector = (from, to) => {
 }
 
 const scalarMult = (c, v) => {
-  return new Vector(c * v.x,c * v.y);
+  return new Vector(c * v.x, c * v.y);
 }
 
 class Colider {
@@ -59,7 +59,8 @@ class Colider {
 }
 
 const dotProd = (a, b) => {
-  return (a.x + b.x)**2 + (a.y + b.y)**2;
+  console.log("dotProd", a, b)
+  return (a.x * b.x) + (a.y * b.y);
 }
 
 const normalize = (v) => {
@@ -72,28 +73,35 @@ const sub = (a, b) => {
   return new Vector(a.x - b.x, a.y - b.y);
 }
 
+const plus = (a, b) => {
+  return new Vector(a.x + b.x, a.y + b.y);
+}
+
 /**
  * reflect the vector `v` in the normal `n`
  */
 const reflect = (v, n) => {
   // r = v - 2(v.n)n
   const dp = dotProd(v, n);
+  console.log("dp", dp);
   return sub(v, scalarMult(2 * dp, n))
 
 }
 
 class CircleColider extends Colider {
-  constructor(center, readius) {
+  constructor(center, radius) {
+    super();
     this.center = center;
     this.radius = radius;
   }
 
-  hasColision(circle) {
-    return distance(this.center, circle.pos) <= this.radius;
+  hasColision(point) {
+    console.log("hasColision", this.center, point.pos, this.radius, distance(this.center, point.pos));
+    return distance(this.center, point.pos) >= this.radius;
   }
 
   calcColisionOnRadius(point) {
-    const centerToPoint = fromToVector(this.center, v);
+    const centerToPoint = fromToVector(this.center, point);
     const distanceToCenter = distance(point, this.center);
     const scalingFactor = this.radius / distanceToCenter;
 
@@ -113,39 +121,33 @@ class CircleColider extends Colider {
     return scalarMult(1 / intercept, new Vector(tangentGradient * point.x, point.y));
   }
 
-  colideTangent(point) {
-    // calculate where point strikes circle (snap back to edge along radius)
-    const colisionPoint = this.calcColisionOnRadius(point)
-
-    // calculate eqaution of tangent at that point
-    const tangentAtPoint = this.tangentAtPoint(colisionPoint);
-
-    // put point back in circle
-    return [point.pos, point.vel];
-  }
-
   colideRadial(point) {
     // calculate where point strikes circle (snap back to edge along radius)
-    const colisionPoint = this.calcColisionOnRadius(point)
+    const colisionPoint = this.calcColisionOnRadius(point.pos)
 
     // calculate vector from center to colision point
     const toRadius = fromToVector(this.center, colisionPoint);
+    console.log("roRadius", toRadius);
     // calculcate vector from colision point to center
     const toCenter = scalarMult(-1, toRadius);
+    console.log("toCenter", toCenter);
     // create internal normal vector
     const normVector = normalize(toCenter);
+    console.log("normVector", normVector);
 
     // reflect velocity in tangent
     const newVel = reflect(point.vel, normVector);
+    console.log("newVel", newVel.x, newVel.y);
 
     // move point within circle
-    const pointDistanceBeyondEdge = distance(colisionPoint, point);
-    const lengthBeyondEdge = pointDistanceBeyondEdge - this.radius;
-    const fractionToMoveInCircle = 1 - (lengthBeyondEdge / this.radius);
-    const pointUpdate = scalarMult(fromToVector(fractionToMoveInCircle, toRadius));
+    const pointDistanceBeyondEdge = distance(colisionPoint, point.pos);
+    const updatedPoint = plus(colisionPoint, scalarMult(pointDistanceBeyondEdge, normVector));
+
+    return [updatedPoint, newVel];
   }
 
   colide(point) {
+    return this.colideRadial(point);
   }
 }
 
@@ -218,15 +220,16 @@ class Ball {
       context.save()
       context.lineJoin = "round";
       context.strokeStyle = this.colour;
+      // context.lineCap = "round";
       const begin = this.linePoints[this.linePoints.length - (params.segmentLength + 1)];
       const end = this.linePoints[this.linePoints.length - 1];
-        context.globalAlpha = 1 / params.lineWidth;
+      context.globalAlpha = 1 / params.numLines;
       for(let l = 0; l < params.numLines; ++l) {
         context.lineWidth = params.lineWidth * ((l + 1) / params.numLines)**params.lineSharpness;
         context.beginPath();
         context.moveTo(begin.x, begin.y);
         for(let i = 0; i < params.segmentLength; ++i) {
-          const index = this.linePoints.length - params.segmentLength;
+          const index = this.linePoints.length - (params.segmentLength + 1) + i;
           const point = this.linePoints[index]
           context.lineTo(point.x, point.y);
         }
@@ -268,10 +271,12 @@ const createCircleOfCircles = (number, radius, ballRadius, colider) => {
     const colour = random.pick(cyberColours);
 
     const theta = (2 * Math.PI) * (i / number);
-    const x = radius * Math.cos(theta);
-    const y = radius * Math.sin(theta);
+    const x = radius * Math.cos(theta) + 10;
+    const y = radius * Math.sin(theta) - 50;
 
-    circles.push(new Ball(new Vector(x, y), new Vector(params.velocityX, params.velocityY), ballRadius, colour, colider))
+    const ball = new Ball(new Vector(x, y), new Vector(params.velocityX, params.velocityY), ballRadius, colour, colider);
+
+    circles.push(ball);
   }
 
   return circles;
@@ -286,11 +291,12 @@ bufferContext.fillRect(0, 0, width, height);
 
 let lastTime = 0;
 
-const circles = createCircleOfCircles(params.numPoints, params.radiusOfGroup, 20, new SquareColider(...settings.dimensions));
+// const circles = createCircleOfCircles(params.numPoints, params.radiusOfGroup, 20, new SquareColider(...settings.dimensions));
+const circles = createCircleOfCircles(params.numPoints, params.radiusOfGroup, 20, new CircleColider(new Vector (0, 0), 540));
 
 const sketch = () => {
   return ({ context, width, height, time }) => {
-    const delta = time - lastTime;
+    let delta = time - lastTime;
     lastTime = time;
 
     context.lineWidth = 6;
@@ -298,6 +304,7 @@ const sketch = () => {
     context.save();
 
     circles.forEach((element, idx) => {
+      console.log(element.pos.x, element.pos.y);
       element.update(delta);
     });
 
