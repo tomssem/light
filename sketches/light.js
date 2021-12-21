@@ -1,5 +1,6 @@
 const canvasSketch = require('canvas-sketch');
 import {random} from "canvas-sketch-util"
+import { subtract } from "lodash";
 var _ = require("lodash");
 
 const width = 1080;
@@ -17,15 +18,15 @@ const cyberColours = ["aqua", "violet", "coral", "cyan", "crimson",
                       "steelblue", "violet"]
 
 const params = {
-  radiusOfGroup: 500,
+  radiusOfGroup: 20,
   velocityX: 1000,
-  velocityY: 5,
+  velocityY: 400,
   lineWidth: 30,
   numLines: 10,
   lineSharpness: 2,
   numCircles: 1,
   numPoints: 40,
-  segmentLength: 10
+  segmentLength: 200
 }
 
 class Vector {
@@ -55,6 +56,30 @@ class Colider {
   colide(circle) {
     return [pos, vel];
   }
+}
+
+const dotProd = (a, b) => {
+  return (a.x + b.x)**2 + (a.y + b.y)**2;
+}
+
+const normalize = (v) => {
+  const magnitude = Math.sqrt(v.x**2 + v.y**2);
+
+  return scalarMult(1 / magnitude, v);
+}
+
+const sub = (a, b) => {
+  return new Vector(a.x - b.x, a.y - b.y);
+}
+
+/**
+ * reflect the vector `v` in the normal `n`
+ */
+const reflect = (v, n) => {
+  // r = v - 2(v.n)n
+  const dp = dotProd(v, n);
+  return sub(v, scalarMult(2 * dp, n))
+
 }
 
 class CircleColider extends Colider {
@@ -95,14 +120,29 @@ class CircleColider extends Colider {
     // calculate eqaution of tangent at that point
     const tangentAtPoint = this.tangentAtPoint(colisionPoint);
 
-    // reflect velocity in tangent
-
     // put point back in circle
     return [point.pos, point.vel];
   }
 
   colideRadial(point) {
-    // calculate where[kkkkkkkkkk]
+    // calculate where point strikes circle (snap back to edge along radius)
+    const colisionPoint = this.calcColisionOnRadius(point)
+
+    // calculate vector from center to colision point
+    const toRadius = fromToVector(this.center, colisionPoint);
+    // calculcate vector from colision point to center
+    const toCenter = scalarMult(-1, toRadius);
+    // create internal normal vector
+    const normVector = normalize(toCenter);
+
+    // reflect velocity in tangent
+    const newVel = reflect(point.vel, normVector);
+
+    // move point within circle
+    const pointDistanceBeyondEdge = distance(colisionPoint, point);
+    const lengthBeyondEdge = pointDistanceBeyondEdge - this.radius;
+    const fractionToMoveInCircle = 1 - (lengthBeyondEdge / this.radius);
+    const pointUpdate = scalarMult(fromToVector(fractionToMoveInCircle, toRadius));
   }
 
   colide(point) {
@@ -150,10 +190,6 @@ class SquareColider extends Colider {
   }
 }
 
-const dotProd = (a, b) => {
-  return a.x * b.x + a.y * b.y;
-}
-
 const isInLine = (a, b, c) => {
   const x = new Vector(a.x - b.x, a.y - b.y);
   const y = new Vector(b.x - c.x, b.y - c.y);
@@ -180,12 +216,13 @@ class Ball {
   drawLines(context) {
     if(this.linePoints.length > params.segmentLength) {
       context.save()
+      context.lineJoin = "round";
       context.strokeStyle = this.colour;
       const begin = this.linePoints[this.linePoints.length - (params.segmentLength + 1)];
       const end = this.linePoints[this.linePoints.length - 1];
         context.globalAlpha = 1 / params.lineWidth;
       for(let l = 0; l < params.numLines; ++l) {
-        context.lineWidth = params.lineWidth * (l / params.numLines)**params.lineSharpness;
+        context.lineWidth = params.lineWidth * ((l + 1) / params.numLines)**params.lineSharpness;
         context.beginPath();
         context.moveTo(begin.x, begin.y);
         for(let i = 0; i < params.segmentLength; ++i) {
