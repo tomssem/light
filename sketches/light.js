@@ -2,8 +2,11 @@ const canvasSketch = require('canvas-sketch');
 import {random} from "canvas-sketch-util"
 var _ = require("lodash");
 
+const width = 1080;
+const height = 1080;
+
 const settings = {
-  dimensions: [ 1080, 1080 ],
+  dimensions: [ width, height ],
   animate: true
 };
 
@@ -15,11 +18,11 @@ const cyberColours = ["aqua", "violet", "coral", "cyan", "crimson",
 
 const params = {
   velocityX: 500,
-  velocityY: 350,
-  lineWidth: 5,
+  velocityY: 650,
+  lineWidth: 10,
   lineSharpness: 1,
-  numCircles: 15,
-  numPoints: 10
+  numCircles: 10,
+  numPoints: 20
 }
 
 class Vector {
@@ -108,20 +111,21 @@ class Ball {
   }
 
   drawLines(context) {
-    context.save()
-    context.strokeStyle = this.colour;
-    for(let i = 0; i < params.lineWidth; ++i) {
-      context.globalAlpha = 1 / params.lineWidth;
-      context.lineWidth = i**params.lineSharpness;
-      context.beginPath();
-      context.moveTo(this.linePoints[0].x, this.linePoints[0].y);
-      this.linePoints.forEach((el, idx) => {
-        context.lineTo(el.x, el.y);
-      });
-      context.lineTo(this.pos.x, this.pos.y);
-      context.stroke();
+    if(this.linePoints.length > 1) {
+      context.save()
+      context.strokeStyle = this.colour;
+      const p1 = this.linePoints[this.linePoints.length - 2];
+      const p2 = this.linePoints[this.linePoints.length - 1];
+      for(let i = 0; i < params.lineWidth; ++i) {
+        context.globalAlpha = 1 / params.lineWidth;
+        context.lineWidth = i**params.lineSharpness;
+        context.beginPath();
+        context.moveTo(p1.x, p1.y);
+        context.lineTo(p2.x, p2.y);
+        context.stroke();
+      }
+      context.restore();
     }
-    context.restore();
   }
 
   draw(context) {
@@ -143,9 +147,9 @@ class Ball {
     this.pos.y += delta * this.vel.y;
 
     if(this.colider.hasColision(this)) {
-      this.linePoints.push(new Vector(this.pos.x, this.pos.y));
       [this.pos, this.vel] = this.colider.colide(this);
     }
+    this.linePoints.push(new Vector(this.pos.x, this.pos.y));
   }
 };
 
@@ -169,6 +173,8 @@ const canvas = document.createElement("canvas");
 canvas.width = settings.dimensions[0];
 canvas.height = settings.dimensions[1];
 const bufferContext = canvas.getContext("2d");
+bufferContext.fillStyle = 'black';
+bufferContext.fillRect(0, 0, width, height);
 
 let lastTime = 0;
 
@@ -178,13 +184,10 @@ const sketch = () => {
   return ({ context, width, height, time }) => {
     const delta = time - lastTime;
     lastTime = time;
-    bufferContext.fillStyle = 'black';
-    bufferContext.fillRect(0, 0, width, height);
 
     context.lineWidth = 6;
 
     context.save();
-
 
     circles.forEach((element, idx) => {
       element.update(delta);
