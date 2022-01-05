@@ -18,15 +18,15 @@ const cyberColours = ["aqua", "violet", "coral", "cyan", "crimson",
                       "steelblue", "violet"]
 
 const params = {
-  start: [0, 450],
-  radiusOfGroup: 100,
-  velocityX: 10,
-  velocityY: 50,
+  start: [50, 0],
+  radiusOfGroup: 30,
+  velocityX: 700,
+  velocityY: 800,
   lineWidth: 10,
   numLines: 5,
   lineSharpness: 2,
   numCircles: 4,
-  numPoints: 10,
+  numPoints: 5,
   segmentLength: 3
 }
 
@@ -188,7 +188,7 @@ class CircleColider extends Colider {
                                                       this.center.y,
                                                       m, n);
     // above returns multiple points, assume closest to point position is the reflection point
-    if(intersections.length == 0) {
+    if(intersections.length != 2) {
       console.assert(false, intersections);
     }
     let intersectionPoint = intersections[0];
@@ -218,7 +218,7 @@ class CircleColider extends Colider {
     const newPos = plus(intersectionPoint, scalarMult(traveled, normedVel));
 
     // reflect velocity in radial
-    return [this.colideRadial(point)[0], newVel];
+    return [newPos, newVel];
   }
 }
 
