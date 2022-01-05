@@ -18,9 +18,10 @@ const cyberColours = ["aqua", "violet", "coral", "cyan", "crimson",
                       "steelblue", "violet"]
 
 const params = {
+  start: [300, 0],
   radiusOfGroup: 100,
   velocityX: 10,
-  velocityY: 40,
+  velocityY: 500,
   lineWidth: 10,
   numLines: 5,
   lineSharpness: 2,
@@ -59,7 +60,6 @@ class Colider {
 }
 
 const dotProd = (a, b) => {
-  console.log("dotProd", a, b)
   return (a.x * b.x) + (a.y * b.y);
 }
 
@@ -83,9 +83,41 @@ const plus = (a, b) => {
 const reflect = (v, n) => {
   // r = v - 2(v.n)n
   const dp = dotProd(v, n);
-  console.log("dp", dp);
   return sub(v, scalarMult(2 * dp, n))
 
+}
+
+// taken from https://cscheng.info/2016/06/09/calculate-circle-line-intersection-with-javascript-and-p5js.html
+function findCircleLineIntersections(r, h, k, m, n) {
+    // circle: (x - h)^2 + (y - k)^2 = r^2
+    // line: y = m * x + n
+    // r: circle radius
+    // h: x value of circle centre
+    // k: y value of circle centre
+    // m: slope
+    // n: y-intercept
+
+    // get a, b, c values
+    var a = 1 + sq(m);
+    var b = -h * 2 + (m * (n - k)) * 2;
+    var c = sq(h) + sq(n - k) - sq(r);
+
+    // get discriminant
+    var d = sq(b) - 4 * a * c;
+    if (d >= 0) {
+        // insert into quadratic formula
+        var intersections = [
+            (-b + sqrt(sq(b) - 4 * a * c)) / (2 * a),
+            (-b - sqrt(sq(b) - 4 * a * c)) / (2 * a)
+        ];
+        if (d == 0) {
+            // only 1 intersection
+            return [intersections[0]];
+        }
+        return intersections;
+    }
+    // no intersection
+    return [];
 }
 
 class CircleColider extends Colider {
@@ -96,7 +128,6 @@ class CircleColider extends Colider {
   }
 
   hasColision(point) {
-    console.log("hasColision", this.center, point.pos, this.radius, distance(this.center, point.pos));
     return distance(this.center, point.pos) >= this.radius;
   }
 
@@ -127,17 +158,13 @@ class CircleColider extends Colider {
 
     // calculate vector from center to colision point
     const toRadius = fromToVector(this.center, colisionPoint);
-    console.log("roRadius", toRadius);
     // calculcate vector from colision point to center
     const toCenter = scalarMult(-1, toRadius);
-    console.log("toCenter", toCenter);
     // create internal normal vector
     const normVector = normalize(toCenter);
-    console.log("normVector", normVector);
 
     // reflect velocity in tangent
     const newVel = reflect(point.vel, normVector);
-    console.log("newVel", newVel.x, newVel.y);
 
     // move point within circle
     const pointDistanceBeyondEdge = distance(colisionPoint, point.pos);
@@ -271,8 +298,8 @@ const createCircleOfCircles = (number, radius, ballRadius, colider) => {
     const colour = random.pick(cyberColours);
 
     const theta = (2 * Math.PI) * (i / number);
-    const x = radius * Math.cos(theta) + 10;
-    const y = radius * Math.sin(theta) - 50;
+    const x = radius * Math.cos(theta) + params.start[0];
+    const y = radius * Math.sin(theta) + params.start[1];
 
     const ball = new Ball(new Vector(x, y), new Vector(params.velocityX, params.velocityY), ballRadius, colour, colider);
 
@@ -304,7 +331,6 @@ const sketch = () => {
     context.save();
 
     circles.forEach((element, idx) => {
-      console.log(element.pos.x, element.pos.y);
       element.update(delta);
     });
 
