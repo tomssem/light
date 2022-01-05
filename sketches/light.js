@@ -18,10 +18,10 @@ const cyberColours = ["aqua", "violet", "coral", "cyan", "crimson",
                       "steelblue", "violet"]
 
 const params = {
-  start: [300, 0],
+  start: [0, 450],
   radiusOfGroup: 100,
   velocityX: 10,
-  velocityY: 500,
+  velocityY: 50,
   lineWidth: 10,
   numLines: 5,
   lineSharpness: 2,
@@ -98,17 +98,21 @@ function findCircleLineIntersections(r, h, k, m, n) {
     // n: y-intercept
 
     // get a, b, c values
-    var a = 1 + sq(m);
-    var b = -h * 2 + (m * (n - k)) * 2;
-    var c = sq(h) + sq(n - k) - sq(r);
+    const a = 1 + m * m;
+    const b = -h * 2 + (m * (n - k)) * 2;
+    const c = h * h + (n - k)**2 - r * r;
+
+    const y = (x) => m * x + n;
 
     // get discriminant
-    var d = sq(b) - 4 * a * c;
+    const d = b * b - 4 * a * c;
     if (d >= 0) {
         // insert into quadratic formula
-        var intersections = [
-            (-b + sqrt(sq(b) - 4 * a * c)) / (2 * a),
-            (-b - sqrt(sq(b) - 4 * a * c)) / (2 * a)
+        const x1 = (-b + Math.sqrt(b * b - 4 * a * c)) / (2 * a);
+        const x2 = (-b - Math.sqrt(b * b - 4 * a * c)) / (2 * a);
+        const intersections = [
+          new Vector(x1, y(x1)),
+          new Vector(x2, y(x2))
         ];
         if (d == 0) {
             // only 1 intersection
@@ -168,13 +172,53 @@ class CircleColider extends Colider {
 
     // move point within circle
     const pointDistanceBeyondEdge = distance(colisionPoint, point.pos);
-    const updatedPoint = plus(colisionPoint, scalarMult(pointDistanceBeyondEdge, normVector));
+    const updatedPos = plus(colisionPoint, scalarMult(pointDistanceBeyondEdge, normVector));
 
-    return [updatedPoint, newVel];
+    return [updatedPos, newVel];
   }
 
   colide(point) {
-    return this.colideRadial(point);
+    // *** calculate line that crosses circle using velocity and point ***
+    const m = point.vel.y / point.vel.x;
+    const n = -m * point.pos.x + point.pos.y;
+
+    // *** calculate point line intersects with circle ***
+    const intersections = findCircleLineIntersections(this.radius,
+                                                      this.center.x,
+                                                      this.center.y,
+                                                      m, n);
+    // above returns multiple points, assume closest to point position is the reflection point
+    if(intersections.length == 0) {
+      console.assert(false, intersections);
+    }
+    let intersectionPoint = intersections[0];
+    if(intersections.length == 2) {
+      const distance1 = distance(point.pos, intersections[0]);
+      const distance2 = distance(point.pos, intersections[1]);
+      if(distance2 < distance1) {
+        intersectionPoint = intersections[1];
+      }
+    }
+
+    // *** reflect velocity in norm at that point ***
+    // calculate vector from center to colision point
+    const toRadius = fromToVector(this.center, intersectionPoint);
+    // calculcate vector from colision point to center
+    const toCenter = scalarMult(-1, toRadius);
+    // create internal normal vector
+    const normVector = normalize(toCenter);
+    // reflect velocity in norm
+    const newVel = reflect(point.vel, normVector);
+
+    // *** calculate where point should be ***
+    // calculate how far point has traveled outside circle
+    const traveled = distance(intersectionPoint, point.pos);
+    // move that far along the new velocity from the intersection point
+    const normedVel = normalize(newVel);
+    const newPos = plus(intersectionPoint, scalarMult(traveled, normedVel));
+
+    // reflect velocity in radial
+    return [this.colideRadial(point)[0], newVel];
   }
 }
 
