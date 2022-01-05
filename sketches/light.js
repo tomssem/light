@@ -18,15 +18,15 @@ const cyberColours = ["aqua", "violet", "coral", "cyan", "crimson",
                       "steelblue", "violet"]
 
 const params = {
-  start: [50, 0],
-  radiusOfGroup: 30,
-  velocityX: 700,
-  velocityY: 800,
-  lineWidth: 10,
+  start: [50, 300],
+  radiusOfGroup: 100,
+  velocityX: 70,
+  velocityY: 80,
+  lineWidth: 5,
   numLines: 5,
-  lineSharpness: 2,
-  numCircles: 4,
-  numPoints: 5,
+  lineSharpness: 0.5,
+  numCircles: 10,
+  numPoints: 200,
   segmentLength: 3
 }
 
@@ -133,48 +133,6 @@ class CircleColider extends Colider {
 
   hasColision(point) {
     return distance(this.center, point.pos) >= this.radius;
-  }
-
-  calcColisionOnRadius(point) {
-    const centerToPoint = fromToVector(this.center, point);
-    const distanceToCenter = distance(point, this.center);
-    const scalingFactor = this.radius / distanceToCenter;
-
-    return scalarMult(scalingFactor, centerToPoint);
-  }
-
-  tangentAtPoint(point) {
-    // gradient of radius in y over change in x
-    const radiusGradient = (point.y - this.center.y) / (point.x - this.center.y);
-    // dot product of radius and tangent is zero
-    const tangentGradient = -(1 / radiusGradient);
-
-    // intercept from y = mx + c, c = y - mx
-    const intercept = point.y - (tangentGradient * point.x);
-
-    // vector equation of line is (mx/c, y/c);
-    return scalarMult(1 / intercept, new Vector(tangentGradient * point.x, point.y));
-  }
-
-  colideRadial(point) {
-    // calculate where point strikes circle (snap back to edge along radius)
-    const colisionPoint = this.calcColisionOnRadius(point.pos)
-
-    // calculate vector from center to colision point
-    const toRadius = fromToVector(this.center, colisionPoint);
-    // calculcate vector from colision point to center
-    const toCenter = scalarMult(-1, toRadius);
-    // create internal normal vector
-    const normVector = normalize(toCenter);
-
-    // reflect velocity in tangent
-    const newVel = reflect(point.vel, normVector);
-
-    // move point within circle
-    const pointDistanceBeyondEdge = distance(colisionPoint, point.pos);
-    const updatedPos = plus(colisionPoint, scalarMult(pointDistanceBeyondEdge, normVector));
-
-    return [updatedPos, newVel];
   }
 
   colide(point) {
