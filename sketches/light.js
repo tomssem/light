@@ -1,5 +1,7 @@
 const canvasSketch = require('canvas-sketch');
 import {random} from "canvas-sketch-util"
+import { RGBAToHex } from "canvas-sketch-util/color";
+import math from "canvas-sketch-util/math";
 import { subtract } from "lodash";
 var _ = require("lodash");
 
@@ -18,16 +20,19 @@ const cyberColours = ["aqua", "violet", "coral", "cyan", "crimson",
                       "steelblue", "violet"]
 
 const params = {
-  start: [50, 300],
-  radiusOfGroup: 100,
-  velocityX: 70,
-  velocityY: 80,
-  lineWidth: 5,
-  numLines: 5,
+  randomFade: 0.5,
+  ballRadius: 10,
+  start: [50, 260],
+  radiusOfGroup: 200,
+  velocityX: 50,
+  velocityY: 40,
+  lineWidth: 20,
+  numLines: 2,
   lineSharpness: 0.5,
-  numCircles: 10,
-  numPoints: 200,
-  segmentLength: 3
+  numCircles: 2,
+  numPoints: 1100,
+  segmentLength: 3,
+  alphaFade: 0.05
 }
 
 class Vector {
@@ -293,15 +298,40 @@ class Ball {
   }
 };
 
-const createCircleOfCircles = (number, radius, ballRadius, colider) => {
+const randomPicker = (angle) => {
+  return random.pick(cyberColours);
+}
+
+const colourWheel = (angle) => {
+  const degrees = angle * (180 / Math.PI);
+  const saturation = random.range(70, 100);
+  const lightness = random.range(20, 70);
+  return `hsl(${degrees},${saturation}%,${lightness}%)`;
+}
+
+const cyberColourWheel = (angle) => {
+  const weight1 = Math.cos(angle) / 2 + 0.5;
+  const weight2 = 1 - weight1;
+
+  const r = 255 * weight1;
+  const g = 255 * weight2;
+  const b = 255;
+
+  return `rgb(${r},${g},${b})`;
+}
+
+const createCircleOfCircles = (number, radius, ballRadius, colider, colourPicker) => {
+  if(colourPicker === undefined) {
+    colourPicker = randomPicker;
+  }
   let circles = [];
 
   for(let i = 0; i < number; ++i) {
-    const colour = random.pick(cyberColours);
-
     const theta = (2 * Math.PI) * (i / number);
     const x = radius * Math.cos(theta) + params.start[0];
     const y = radius * Math.sin(theta) + params.start[1];
+
+    const colour = colourPicker(theta);
 
     const ball = new Ball(new Vector(x, y), new Vector(params.velocityX, params.velocityY), ballRadius, colour, colider);
 
@@ -321,7 +351,11 @@ bufferContext.fillRect(0, 0, width, height);
 let lastTime = 0;
 
 // const circles = createCircleOfCircles(params.numPoints, params.radiusOfGroup, 20, new SquareColider(...settings.dimensions));
-const circles = createCircleOfCircles(params.numPoints, params.radiusOfGroup, 20, new CircleColider(new Vector (0, 0), 540));
+const circles = createCircleOfCircles(params.numPoints,
+                                      params.radiusOfGroup,
+                                      params.ballRadius,
+                                      new CircleColider(new Vector (0, 0), 540),
+                                      cyberColourWheel);
 
 const sketch = () => {
   return ({ context, width, height, time }) => {
@@ -331,6 +365,15 @@ const sketch = () => {
     context.lineWidth = 6;
 
     context.save();
+
+    const randomFade = random.noise1D(time, 0.1) * 0.5 + 0.5;
+    console.log(randomFade);
+    // if(randomFade < params.randomFade) {
+    context.save();
+    bufferContext.globalAlpha = randomFade * params.alphaFade;
+    bufferContext.fillRect(0, 0, width, height);
+    context.restore();
+    // }
 
     circles.forEach((element, idx) => {
       element.update(delta);
