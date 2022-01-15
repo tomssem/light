@@ -24,15 +24,15 @@ const params = {
   ballRadius: 10,
   start: [50, 260],
   radiusOfGroup: 200,
-  velocityX: 50,
-  velocityY: 40,
+  velocityX: 450,
+  velocityY: 200,
   lineWidth: 20,
   numLines: 2,
   lineSharpness: 0.5,
   numCircles: 2,
-  numPoints: 1100,
+  numPoints: 2100,
   segmentLength: 3,
-  alphaFade: 0.05
+  alphaFade: 0.5
 }
 
 class Vector {
@@ -241,11 +241,6 @@ class Ball {
     this.radius = radius;
     this.colour = colour;
 
-    if(colider === undefined) {
-      colider = new Colider();
-    }
-    this.colider = colider;
-
     this.linePoints = [new Vector(this.pos.x, this.pos.y)];
   }
 
@@ -262,8 +257,8 @@ class Ball {
         context.lineWidth = params.lineWidth * ((l + 1) / params.numLines)**params.lineSharpness;
         context.beginPath();
         context.moveTo(begin.x, begin.y);
-        for(let i = 0; i < params.segmentLength; ++i) {
-          const index = this.linePoints.length - (params.segmentLength + 1) + i;
+        for(let i = 1; i < params.segmentLength; ++i) {
+          const index = this.linePoints.length - (params.segmentLength) + i;
           const point = this.linePoints[index]
           context.lineTo(point.x, point.y);
         }
@@ -286,6 +281,17 @@ class Ball {
 
     context.restore();
   }
+}
+
+class BouncingBall extends Ball {
+  constructor(pos, vel, radius, colour, colider) {
+    super(pos, vel, radius, colour);
+
+    if(colider === undefined) {
+      colider = new Colider();
+    }
+    this.colider = colider;
+  }
 
   update(delta) {
     this.pos.x += delta * this.vel.x;
@@ -295,6 +301,16 @@ class Ball {
       [this.pos, this.vel] = this.colider.colide(this);
     }
     this.linePoints.push(new Vector(this.pos.x, this.pos.y));
+  }
+};
+
+class FlutteringBall extends Ball {
+  constructor(pos, vel, raius, colour, vectorField) {
+    super(pos, vel, radius, colour);
+
+    if(vectorField === undefined) {
+      vectorField = random.noise3D;
+    }
   }
 };
 
@@ -333,7 +349,7 @@ const createCircleOfCircles = (number, radius, ballRadius, colider, colourPicker
 
     const colour = colourPicker(theta);
 
-    const ball = new Ball(new Vector(x, y), new Vector(params.velocityX, params.velocityY), ballRadius, colour, colider);
+    const ball = new BouncingBall(new Vector(x, y), new Vector(params.velocityX, params.velocityY), ballRadius, colour, colider);
 
     circles.push(ball);
   }
@@ -355,7 +371,8 @@ const circles = createCircleOfCircles(params.numPoints,
                                       params.radiusOfGroup,
                                       params.ballRadius,
                                       new CircleColider(new Vector (0, 0), 540),
-                                      cyberColourWheel);
+                                      // new SquareColider(1080, 1080),
+                                      randomPicker);
 
 const sketch = () => {
   return ({ context, width, height, time }) => {
