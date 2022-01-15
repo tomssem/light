@@ -20,19 +20,22 @@ const cyberColours = ["aqua", "violet", "coral", "cyan", "crimson",
                       "steelblue", "violet"]
 
 const params = {
+  vectorFieldTimeSmoothness: 0.001,
+  vectorFieldSpaceSmoothness: 0.02,
+  vectorFieldWeight: 100,
   randomFade: 0.5,
   ballRadius: 10,
-  start: [50, 260],
+  start: [0, 0],
   radiusOfGroup: 200,
-  velocityX: 450,
-  velocityY: 200,
+  velocityX: 0,
+  velocityY: 0,
   lineWidth: 20,
   numLines: 2,
   lineSharpness: 0.5,
-  numCircles: 2,
-  numPoints: 2100,
+  numCircles: 5,
+  numPoints: 100,
   segmentLength: 3,
-  alphaFade: 0.5
+  alphaFade: 0.1
 }
 
 class Vector {
@@ -304,13 +307,29 @@ class BouncingBall extends Ball {
   }
 };
 
-class FlutteringBall extends Ball {
-  constructor(pos, vel, raius, colour, vectorField) {
-    super(pos, vel, radius, colour);
+class FlutteringBall extends BouncingBall {
+  constructor(pos, vel, radius, colour, colider, vectorField) {
+    super(pos, vel, radius, colour, colider);
 
     if(vectorField === undefined) {
       vectorField = random.noise3D;
     }
+    this.vectorField = vectorField;
+
+    this.time = 0;
+  }
+
+  update(delta) {
+    this.time += delta;
+
+    const angle = Math.PI * this.vectorField(this.pos.x * params.vectorFieldSpaceSmoothness,
+                                             this.pos.y * params.vectorFieldSpaceSmoothness,
+                                             this.time * params.vectorFieldTimeSmoothness);
+
+    this.vel.x = params.vectorFieldWeight * Math.cos(angle) - params.vectorFieldWeight * 0.5;
+    this.vel.y = params.vectorFieldWeight * Math.sin(angle);
+
+    super.update(delta);
   }
 };
 
@@ -349,7 +368,7 @@ const createCircleOfCircles = (number, radius, ballRadius, colider, colourPicker
 
     const colour = colourPicker(theta);
 
-    const ball = new BouncingBall(new Vector(x, y), new Vector(params.velocityX, params.velocityY), ballRadius, colour, colider);
+    const ball = new FlutteringBall(new Vector(x, y), new Vector(params.velocityX, params.velocityY), ballRadius, colour, colider);
 
     circles.push(ball);
   }
@@ -370,9 +389,9 @@ let lastTime = 0;
 const circles = createCircleOfCircles(params.numPoints,
                                       params.radiusOfGroup,
                                       params.ballRadius,
-                                      new CircleColider(new Vector (0, 0), 540),
-                                      // new SquareColider(1080, 1080),
-                                      randomPicker);
+                                      // new CircleColider(new Vector (0, 0), 540),
+                                      new SquareColider(1080, 1080),
+                                      colourWheel);
 
 const sketch = () => {
   return ({ context, width, height, time }) => {
@@ -383,7 +402,7 @@ const sketch = () => {
 
     context.save();
 
-    const randomFade = random.noise1D(time, 0.1) * 0.5 + 0.5;
+    const randomFade = random.noise1D(time, 1) * 0.5 + 0.5;
     console.log(randomFade);
     // if(randomFade < params.randomFade) {
     context.save();
